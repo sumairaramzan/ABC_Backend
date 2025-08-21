@@ -42,26 +42,24 @@ exports.login = async (req, res) => {
 
 // Forgot Password
 exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ msg: "User not found" });
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ msg: "User not found" });
 
-    const resetToken = user.getResetToken();
-    await user.save();
+  const resetToken = user.getResetToken();
+  await user.save();
 
-    // Normally send email with this link
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
-    res.json({ msg: "Reset link generated", resetUrl });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
+  const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+  res.json({ msg: "Reset link generated", resetToken, resetUrl });
 };
+
 
 // Reset Password
 exports.resetPassword = async (req, res) => {
   try {
-    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const { token, password } = req.body;
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
     const user = await User.findOne({
       resetToken: hashedToken,
       resetTokenExpiry: { $gt: Date.now() },
@@ -69,7 +67,7 @@ exports.resetPassword = async (req, res) => {
 
     if (!user) return res.status(400).json({ msg: "Invalid or expired token" });
 
-    user.password = req.body.password;
+    user.password = password;
     user.resetToken = undefined;
     user.resetTokenExpiry = undefined;
     await user.save();
@@ -79,3 +77,4 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
